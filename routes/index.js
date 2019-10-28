@@ -1,5 +1,7 @@
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const authController = require("../controllers/auth.controller");
+
+const router = express.Router();
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
@@ -9,14 +11,10 @@ router.get('/', function (req, res, next) {
 });
 
 // POST /signup
-router.post('/signup', function (req, res) {
-  res.send(req.body)
-})
+router.post("/signup", authController.passportSignup, authController.signup);
 
 // POST /login
-router.post('/login', function (req, res) {
-  res.send(req.body)
-})
+router.post("/login", authController.passportLogin);
 
 /* GET user info. */
 router.get('/me', function (req, res, next) {

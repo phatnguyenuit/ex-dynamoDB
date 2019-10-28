@@ -4,6 +4,14 @@ const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser')
 const logger = require('morgan');
 
+const passport = require('passport');
+require('./auth/auth')(passport);
+
+const {
+  connectDb
+} = require('./db/connect');
+
+
 const indexRouter = require('./routes/index');
 
 // const aws = require('aws-sdk');
@@ -21,8 +29,29 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json())
 
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
+//config passport
+passport.serializeUser(function (user, done) {
+  done(null, user);
+});
+passport.deserializeUser(function (user, done) {
+  done(null, user);
+});
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
+
+//Handle errors
+app.use(function (err, req, res, next) {
+  console.log('error:', err);
+  res.status(err.status || 500);
+  res.json({
+    error: err
+  });
+});
+
+connectDb();
 
 module.exports = app;
