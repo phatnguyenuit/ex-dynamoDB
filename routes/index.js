@@ -1,5 +1,6 @@
 const express = require('express');
 const authController = require("../controllers/auth.controller");
+const isLoggedIn = require('../middlewares/isLoggedIn');
 
 const router = express.Router();
 
@@ -11,20 +12,12 @@ router.get('/', function (req, res, next) {
 });
 
 // POST /signup
-router.post("/signup", authController.passportSignup, authController.signup);
+router.post("/signup", authController.signup, );
 
 // POST /login
-router.post("/login", authController.passportLogin);
+router.post("/login", authController.login);
 
 /* GET user info. */
-router.get('/me', function (req, res, next) {
-  res.send({
-    userId: '1',
-    userName: 'fastnguyen',
-    password: 'thisIsFastNguyen',
-    name: 'Fast Nguyen',
-    address: 'Vietnam'
-  })
-});
+router.get('/me', isLoggedIn, authController.getUserInfo);
 
 module.exports = router;

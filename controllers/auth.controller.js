@@ -1,42 +1,123 @@
-const passport = require("passport");
+const jwt = require('jsonwebtoken');
+const dynamoose = require('dynamoose');
+const UserSchema = require('../model/user.model');
+const {
+  jwtSecret,
+  jwtExpiresIn
+} = require('../config/config');
 
-const passportSignup = passport.authenticate("signup", {
-  session: true
-});
+const {
+  encryptText,
+  compareEncrypted
+} = require('../helpers/crypto');
 
-const signup = (req, res, next) => {
-  res.redirect("/");
-};
 
-const passportLogin = (req, res, next) => {
-  passport.authenticate("login", (err, user, info) => {
-    if (err) {
-      return res.json(err);
+const signup = async (req, res, next) => {
+  const {
+    userName,
+    password,
+    name,
+    address
+  } = req.body;
+  const User = dynamoose.model("User", UserSchema);
+  User.scan({
+    userName: {
+      eq: userName
+    },
+  }, async (error, results) => {
+    if (error) {
+      next(error);
     }
-    if (!user) {
-      return res.render("pages/login", {
-        ...req.body,
-        error: info
+    if (!results.count) {
+      const hashedPassword = await encryptText(password);
+      const newUser = new User({
+        userName,
+        name,
+        address,
+        password: hashedPassword,
+      })
+      await newUser.save();
+      const token = jwt.sign({
+        userId: newUser.id,
+        userName: newUser.userName
+      }, jwtSecret, {
+        expiresIn: jwtExpiresIn
       });
+      res.send({
+        token
+      })
+    } else {
+      next({
+        name: 'Existed Data',
+        message: 'User existed!'
+      })
     }
-    req.login(
-      user, {
-        session: true
-      },
-      error => {
-        if (error) return next(error);
-        return res.redirect("/");
-      }
-    );
-  })(req, res, next);
-};
+  });
 
-/*
-Reference: https://scotch.io/@devGson/api-authentication-with-json-web-tokensjwt-and-passport
-*/
+}
+
+const login = async (req, res, next) => {
+  const {
+    userName,
+    password,
+  } = req.body;
+  const User = dynamoose.model("User", UserSchema);
+  User.scan({
+    userName: {
+      eq: userName
+    },
+  }, async (error, results) => {
+    if (error) {
+      next(error);
+    }
+    if (results.count === 1) {
+      const searchedUser = results[0];
+      const matchedPassword = await compareEncrypted(password, searchedUser.password);
+      if (matchedPassword) {
+        res.send({
+          loggedIn: true,
+          token: jwt.sign({
+            userId: searchedUser.id,
+            userName: searchedUser.userName
+          }, jwtSecret, {
+            expiresIn: jwtExpiresIn
+          })
+        })
+      } else {
+        next({
+          name: 'NotMatchData',
+          message: 'Wrong password!'
+        })
+      }
+    } else {
+      next({
+        name: 'NotFoundData',
+        message: 'Wrong user name!'
+      })
+    }
+  });
+}
+
+const getUserInfo = async (req, res, next) => {
+  const User = dynamoose.model("User", UserSchema);
+  User.get({
+    id: req.user.userId,
+  }).then(({
+    userName,
+    address,
+    name
+  }) => {
+    res.send({
+      userName,
+      name,
+      address
+    })
+  }).catch(e => next(e))
+
+}
 
 module.exports = {
-  passportSignup,
-  passportLogin,
-  signup
+  signup,
+  login,
+  getUserInfo
 };

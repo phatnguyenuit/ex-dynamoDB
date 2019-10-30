@@ -1,5 +1,8 @@
 const dynamoose = require('dynamoose');
 const dynalite = require('dynalite');
+const {
+  aws_region
+} = require('../config/config');
 
 const startUpAndReturnDynamo = async () => {
   const dynaliteServer = dynalite({
@@ -11,9 +14,7 @@ const startUpAndReturnDynamo = async () => {
 
 const createDynamooseInstance = () => {
   dynamoose.AWS.config.update({
-    accessKeyId: 'AKID',
-    secretAccessKey: 'SECRET',
-    region: 'us-east-1'
+    region: aws_region
   });
   dynamoose.local(); // This defaults to "http://localhost:8000"
 }
@@ -37,6 +38,4 @@ const connectDb = async () => {
   createDynamooseInstance();
 }
 
-module.exports = {
-  connectDb
-}
+module.exports = connectDb;
